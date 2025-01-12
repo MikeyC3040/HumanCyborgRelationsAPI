@@ -49,18 +49,22 @@ HCRVocalizer::HCRVocalizer(HardwareSerial *conn,int baud)
     connectionType=0x01;
 }
 
+#ifdef SoftwareSerial_h
 HCRVocalizer::HCRVocalizer(SoftwareSerial *conn,int baud)
     : _softserial(conn), _serialBaud(baud)
 {
     connectionType=0x02;
 }
+#endif
 
 HCRVocalizer::HCRVocalizer(int rx, int tx,int baud)
     : _serialBaud(9600)
 {
+    #ifdef SoftwareSerial_h
     #if defined(ARDUINO_ARCH_AVR) || defined(ARDUINO_ARCH_PIC32)
     connectionType=0x02;
     _softserial = new SoftwareSerial(rx,tx);
+    #endif
     #endif
 }
 
@@ -96,6 +100,7 @@ void HCRVocalizer::begin(const uint16_t refspeed)
             _serial->println("Begin _serial");
             break;
         case 0x02:
+#ifdef SoftwareSerial_h
 #ifdef ARDUINO_ARCH_AVR
             ((SoftwareSerial *)_softserial)->begin(_serialBaud);
 #elif defined ARDUINO_ARCH_PIC32
@@ -103,12 +108,13 @@ void HCRVocalizer::begin(const uint16_t refspeed)
 #endif
             while (!_softserial);
             _softserial->println("Begin _softserial");
+#endif
             break;
         case 0x03:
             if (_i2caddr>0){
                 _i2c->begin();
                 _i2c->setClock(_serialBaud);
-                _i2c->setWireTimeout(3000 /* us */, true /* reset_on_timeout */);
+                _i2c->setTimeout(3000 /* us */);
             }
             break;
         default:
@@ -162,7 +168,9 @@ void HCRVocalizer::transmit(String command, bool retry)
             _serial->write((command + "\n").c_str());
             break;
         case 0x02:
+        #ifdef SoftwareSerial_h
             _softserial->write((command + "\n").c_str());
+        #endif
             break;
         case 0x03:
             int i2cStatus = 0;
@@ -184,7 +192,6 @@ void HCRVocalizer::transmit(String command, bool retry)
                 }
             }
             break;
-        default: break;
     }
 }
 
@@ -200,11 +207,13 @@ void HCRVocalizer::receive(void)
             }
             break;
         case 0x02:
+        #ifdef SoftwareSerial_h
             if (_softserial->available())
             {
                 char ch = _softserial->read();
                 receiveData(ch);
             }
+        #endif
             break;
         case 0x03:
             int bytes = _i2c->requestFrom((int)_i2caddr,(int)8);
@@ -226,7 +235,6 @@ void HCRVocalizer::receive(void)
                 Serial.println("} - No Response;");
             }
             break;
-        default: break;
     }
 }
 
@@ -400,6 +408,12 @@ void HCRVocalizer::Muse(int min, int max)
     if (min < 0 || min > 99) return;
     if (max < 0 || max > 99) return;
     String msg = "MN" + ToString(min) + ",MX" + ToString(max);
+    sendCommand(msg);
+}
+
+void HCRVocalizer::ToggleMuse(void)
+{
+    String msg = "MT,QM";
     sendCommand(msg);
 }
 
