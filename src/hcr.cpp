@@ -351,7 +351,7 @@ void HCRVocalizer::processCommands(char* input)
         Serial.print("QVB::"); Serial.println(getValue(response,',',1).toInt());
         Volume_B = getValue(response,',',1).toInt();
     }
-    else if (qC.equals((String)"DF"))
+    else if (qC.equals((String)"QD"))
     {
         emote_happy = getValue(response,',',1).toInt();
         emote_sad = getValue(response,',',2).toInt();
