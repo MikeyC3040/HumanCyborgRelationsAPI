@@ -172,10 +172,10 @@ void HCRVocalizer::transmit(String command, bool retry)
             _softserial->write((command + "\n").c_str());
         #endif
             break;
-        case 0x03:
+        /*case 0x03:
             int i2cStatus = 0;
 
-            _i2c->beginTransmission((byte)_i2caddr);
+            _i2c->beginTransmission((uint8_t)_i2caddr);
             _i2c->write((command + "\n").c_str());
             i2cStatus = _i2c->endTransmission();
 
@@ -191,7 +191,7 @@ void HCRVocalizer::transmit(String command, bool retry)
                     transmit(command,true);
                 }
             }
-            break;
+            break;*/
     }
 }
 
@@ -224,7 +224,7 @@ void HCRVocalizer::receive(void)
                 Serial.print("} receive: ");
                 while (_i2c->available())
                 {
-                    byte ch = _i2c->read();
+                    uint8_t ch = _i2c->read();
                     Serial.print((char)ch);
                     receiveData(ch);
                 }
