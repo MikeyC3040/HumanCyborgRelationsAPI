@@ -20,7 +20,7 @@
 #endif
 #include <Wire.h>
 
-#define HCR_BUFFER_SIZE 32
+#define HCR_BUFFER_SIZE 37
 
 #ifndef HCR_BAUD_RATE
 #define HCR_BAUD_RATE 9600

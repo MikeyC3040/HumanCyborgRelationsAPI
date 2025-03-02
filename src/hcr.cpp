@@ -1,7 +1,6 @@
 #include "hcr.h"
 #include <Stream.h>
 #include <Wire.h>
-
 #if defined(ARDUINO) && ARDUINO >=100
 #include <Arduino.h>
 #else
@@ -32,7 +31,7 @@
 }; */
 
 HCRVocalizer::HCRVocalizer(const uint8_t addr, TwoWire &i2c)
-    : _i2caddr(addr), _i2c(&i2c), _serialBaud(400000)
+    : _i2caddr(addr), _i2c(&i2c), _serialBaud(HCR_I2C_RATE)
 {
     connectionType=0x03;
 }
@@ -172,11 +171,11 @@ void HCRVocalizer::transmit(String command, bool retry)
             _softserial->write((command + "\n").c_str());
         #endif
             break;
-        /*case 0x03:
+        case 0x03:
             int i2cStatus = 0;
-
+            const char* send = (command + "\n").c_str();
             _i2c->beginTransmission((uint8_t)_i2caddr);
-            _i2c->write((command + "\n").c_str());
+            _i2c->write((uint8_t *)send,strlen(send));
             i2cStatus = _i2c->endTransmission();
 
             // Serial.print(command); Serial.print("-"); Serial.print(i2cStatus); Serial.println(";");
@@ -191,7 +190,7 @@ void HCRVocalizer::transmit(String command, bool retry)
                     transmit(command,true);
                 }
             }
-            break;*/
+            break;
     }
 }
 
@@ -216,7 +215,7 @@ void HCRVocalizer::receive(void)
         #endif
             break;
         case 0x03:
-            int bytes = _i2c->requestFrom((int)_i2caddr,(int)8);
+            int bytes = _i2c->requestFrom((int)_i2caddr,(int)HCR_BUFFER_SIZE);
             Serial.print("i2c {");
             Serial.print(bytes);
             if (_i2c->available())
@@ -240,15 +239,17 @@ void HCRVocalizer::receive(void)
 
 void HCRVocalizer::receiveData(char ch)
 {
-    if (ch == '<')
-        return;
-
+    
     if (ch == '>' || ch == '\r' || ch == '\n' || ch == 0) {
         cmdBuffer[cmdPos] = '\0';
         cmdPos = 0;
         if (*cmdBuffer != '\0') {
+            Serial.printf("Received end char: %s\n", cmdBuffer);
             processCommands(cmdBuffer);
         }
+    }
+    else if (ch == '<' || ch < 36 || ch > 126) {
+        return;
     }
     else if (cmdPos < (int)sizeof(cmdBuffer)) {
         cmdBuffer[cmdPos++] = ch;
@@ -258,6 +259,7 @@ void HCRVocalizer::receiveData(char ch)
         cmdBuffer[cmdPos-1] = '\0';
         cmdPos = 0;
         if (*cmdBuffer != '\0') {
+            Serial.printf("Received max chars: %s\n", cmdBuffer);
             processCommands(cmdBuffer);
         }
     }
@@ -364,6 +366,10 @@ void HCRVocalizer::processCommands(char* input)
         state_chv = getValue(response,',',9).toInt();
         state_cha = getValue(response,',',10).toInt();
         state_chb = getValue(response,',',11).toInt();
+    }
+    else
+    {
+        Serial.printf("Unknown Command: %s\n", input);
     }
 }
 
@@ -584,6 +590,7 @@ float HCRVocalizer::getVolume(int ch)
     };
     return volume;
 }
+
 
 String HCRVocalizer::getValue(String data, char separator, int index)
 {
